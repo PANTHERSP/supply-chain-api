@@ -21,7 +21,8 @@ const saltRounds = 12;
 
 const userSchema = new mongoose.Schema({
     username: { type: String, required: true, unique: true },
-    password: { type: String, required: true }
+    password: { type: String, required: true },
+    role: { type: String, required: true }
 });
 
   
@@ -58,8 +59,9 @@ app.post('/sign-in', async (req, res) => {
             console.log('Invalid password');
             return res.status(401).json({ message: 'Invalid password' });
         }
+        console.log("user", user);
 
-        const token = jwt.sign({ username }, secretKey, { expiresIn: '1d' });
+        const token = jwt.sign({ username, role: user.role }, secretKey, { expiresIn: '1d' });
         res.cookie('token', token, {
              httpOnly: true,
              secure: true,
@@ -67,7 +69,7 @@ app.post('/sign-in', async (req, res) => {
              maxAge: 1000 * 60 * 60 * 24
         });
         console.log('User signed in successfully');
-        res.status(200).json({ message: 'User signed in successfully', user: { username: user.username, role: user.role || 'customer' } });
+        res.status(200).json({ message: 'User signed in successfully', user: { username: user.username, role: user.role } });
         
     } catch (error) {
         console.error(error);
@@ -98,7 +100,8 @@ app.get('/check-session', (req, res) => {
 
     try {
         const decoded = jwt.verify(token, secretKey);
-        res.json({ auth: true, user: { username: decoded.username, role: decoded.role || 'customer'} });
+        console.log('Token verified:', decoded);
+        res.json({ auth: true, user: { username: decoded.username, role: decoded.role } });
         console.log('User is signed in');
     } catch (error) {
         console.error("Error verifying token:", error);
@@ -107,7 +110,8 @@ app.get('/check-session', (req, res) => {
 });
 
 app.post('/register', async (req, res) => {
-    const { username, password } = req.body;
+    const { username, password, role } = req.body;
+    console.log("register", req.body);
     try {
         const User = mongoose.model('User', userSchema);
         const isUserExist = await User.findOne({ username });
@@ -119,10 +123,10 @@ app.post('/register', async (req, res) => {
 
         const salt = await bcrypt.genSalt(saltRounds);
         const hashedPassword = await bcrypt.hash(password, salt);
-        const user = new User({ username, password: hashedPassword });
+        const user = new User({ username, password: hashedPassword, role });
         await user.save();
         console.log('User registered successfully,', user);
-        res.status(201).json({ message: 'User registered successfully', user: { username: user.username, role: user.role || 'customer' } });
+        res.status(201).json({ message: 'User registered successfully', user});
         
     } catch (error) {
         console.error(error);
