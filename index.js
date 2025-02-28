@@ -59,14 +59,15 @@ app.post('/sign-in', async (req, res) => {
             return res.status(401).json({ message: 'Invalid password' });
         }
 
-        const token = jwt.sign({ username }, secretKey, { expiresIn: '10s' });
+        const token = jwt.sign({ username }, secretKey, { expiresIn: '1d' });
         res.cookie('token', token, {
              httpOnly: true,
              secure: true,
-             sameSite: 'none'
+             sameSite: 'none',
+             maxAge: 1000 * 60 * 60 * 24
         });
         console.log('User signed in successfully');
-        res.status(200).json({ message: 'User signed in successfully' });
+        res.status(200).json({ message: 'User signed in successfully', user: { username: user.username, role: user.role || 'customer' } });
         
     } catch (error) {
         console.error(error);
@@ -78,7 +79,8 @@ app.post('/sign-out', (req, res) => {
     res.clearCookie('token', {
         httpOnly: true,
         secure: true,
-        sameSite: 'none'
+        sameSite: 'none',
+        maxAge: 0
     });
     console.log('User signed out successfully');
     res.status(200).json({ message: 'User signed out successfully' });
@@ -96,7 +98,7 @@ app.get('/check-session', (req, res) => {
 
     try {
         const decoded = jwt.verify(token, secretKey);
-        res.json({ auth: true, user: decoded });
+        res.json({ auth: true, user: { username: decoded.username, role: decoded.role || 'customer'} });
         console.log('User is signed in');
     } catch (error) {
         console.error("Error verifying token:", error);
@@ -112,7 +114,7 @@ app.post('/register', async (req, res) => {
 
         if (isUserExist) {
             console.log('User already exists');
-            return res.status(409).json({ message: 'User already exists' });
+            return res.status(409).json({ message: 'User already exists', user: null });
         }
 
         const salt = await bcrypt.genSalt(saltRounds);
@@ -120,11 +122,11 @@ app.post('/register', async (req, res) => {
         const user = new User({ username, password: hashedPassword });
         await user.save();
         console.log('User registered successfully,', user);
-        res.status(201).json({ message: 'User registered successfully' });
+        res.status(201).json({ message: 'User registered successfully', user: { username: user.username, role: user.role || 'customer' } });
         
     } catch (error) {
         console.error(error);
-        res.status(500).json({ message: 'Internal server error' });
+        res.status(500).json({ message: 'Internal server error', error: error.message });
     }
 });
 
