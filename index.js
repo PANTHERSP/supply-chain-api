@@ -25,6 +25,19 @@ const userSchema = new mongoose.Schema({
     role: { type: String, required: true }
 });
 
+const productSchema = new mongoose.Schema({
+    productName: { type: String, required: true },
+    productCode: { type: String, required: true },
+    description: { type: String, required: true },
+    price: { type: Number, required: true },
+    quantity: { type: Number, required: true },
+    weight: { type: Number, required: true },
+    latitude: { type: Number, required: true },
+    longitude: { type: Number, required: true },
+    plantingDate: { type: Date, required: true },
+    expiryDate: { type: Date, required: true }
+});
+
   
 app.use(cors(corsOptions));
 app.use(express.json());
@@ -127,6 +140,22 @@ app.post('/register', async (req, res) => {
         await user.save();
         console.log('User registered successfully,', user);
         res.status(201).json({ message: 'User registered successfully', user});
+        
+    } catch (error) {
+        console.error(error);
+        res.status(500).json({ message: 'Internal server error', error: error.message });
+    }
+});
+
+app.post('/add-product', async (req, res) => {
+    const { productName, productCode, description, price, quantity, weight, latitude, longitude, plantingDate, expiryDate } = req.body;
+    console.log("add product", req.body);
+    try {
+        const Product = mongoose.model('Product', productSchema);
+        const product = new Product({ productName, productCode, description, price, quantity, weight, latitude, longitude, plantingDate, expiryDate });
+        await product.save();
+        console.log('Product added successfully,', product);
+        res.status(201).json({ message: 'Product added successfully', product});
         
     } catch (error) {
         console.error(error);
