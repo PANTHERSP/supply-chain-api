@@ -5,6 +5,9 @@ const bcrypt = require('bcrypt');
 const jwt = require('jsonwebtoken');
 const cors = require('cors');
 const app = express();
+const { v4: uuidv4 } = require('uuid');
+const { format } = require('date-fns');
+const { th } = require('date-fns/locale');
 
 require('dotenv').config();
 
@@ -28,15 +31,19 @@ const userSchema = new mongoose.Schema({
 const productSchema = new mongoose.Schema({
     productName: { type: String, required: true },
     productCode: { type: String, required: true },
-    description: { type: String, required: true },
+    productDescription: { type: String, required: true },
     price: { type: Number, required: true },
     quantity: { type: Number, required: true },
     weight: { type: Number, required: true },
+    farmName: { type: String, required: true },
+    farmDetails: { type: String, required: true },
     latitude: { type: Number, required: true },
     longitude: { type: Number, required: true },
     plantingDate: { type: Date, required: true },
-    expiryDate: { type: Date, required: true }
-});
+    expiryDate: { type: Date, required: true },
+    universalId: { type: String, required: true },
+    inStockDate: { type: String, required: true },
+}, { timestamps: true });
 
   
 app.use(cors(corsOptions));
@@ -148,14 +155,28 @@ app.post('/register', async (req, res) => {
 });
 
 app.post('/add-product', async (req, res) => {
-    const { productName, productCode, description, price, quantity, weight, latitude, longitude, plantingDate, expiryDate } = req.body;
+    // const { productName, productCode, productDescription, price, quantity, weight, farmName, farmDetails, latitude, longitude, plantingDate, expiryDate } = req.body;
     console.log("add product", req.body);
     try {
         const Product = mongoose.model('Product', productSchema);
-        const product = new Product({ productName, productCode, description, price, quantity, weight, latitude, longitude, plantingDate, expiryDate });
+        const count = await Product.countDocuments();
+        const product = new Product({ ...req.body, universalId: `${count + 1}`, inStockDate: format(new Date(), 'dd/MM/yyyy HH:mm', { locale: th }) });
         await product.save();
         console.log('Product added successfully,', product);
         res.status(201).json({ message: 'Product added successfully', product});
+        
+    } catch (error) {
+        console.error(error);
+        res.status(500).json({ message: 'Internal server error', error: error.message });
+    }
+});
+
+app.get('/get-all-products', async (req, res) => {
+    try {
+        const Product = mongoose.model('Product', productSchema);
+        const products = await Product.find();
+        console.log('Products fetched successfully,', products);
+        res.status(200).json({ message: 'Products fetched successfully', products});
         
     } catch (error) {
         console.error(error);
