@@ -58,6 +58,7 @@ const dealSchema = new mongoose.Schema({
 
 const productSchema = new mongoose.Schema({
     dealId: { type: String, required: true },
+    status: { type: String, required: true },
     productName: { type: String, required: true },
     productCode: { type: String, required: true },
     price: { type: Number, required: true },
@@ -71,7 +72,15 @@ const productSchema = new mongoose.Schema({
     inStockDate: { type: String, required: true },
 }, { timestamps: true });
 
-const s3 = new S3Client();
+const s3 = new S3Client(
+    {
+        region: process.env.AWS_REGION,
+        credentials: {
+            accessKeyId: process.env.AWS_ACCESS_KEY_ID,
+            secretAccessKey: process.env.AWS_SECRET_ACCESS_KEY
+        }
+    }
+);
 
   
 app.use(cors(corsOptions));
@@ -192,15 +201,36 @@ app.post('/register', async (req, res) => {
 
 app.post('/add-product', async (req, res) => {
     // const { productName, productCode, productDescription, price, quantity, weight, farmName, farmDetails, latitude, longitude, plantingDate, expiryDate } = req.body;
-    const { plantingDate, expiryDate, dealId } = req.body;
+    const { plantingDate, expiryDate } = req.body;
     console.log("add product", req.body);
     try {
         const Product = mongoose.model('Product', productSchema);
         const count = await Product.countDocuments();
-        const product = new Product({ ...req.body, productId: `${count + 1}`, plantingDate: format(new Date(plantingDate), 'dd/MM/yyyy HH:mm', { locale: th }), expiryDate: format(new Date(expiryDate), 'dd/MM/yyyy HH:mm', { locale: th }), inStockDate: format(new Date(), 'dd/MM/yyyy HH:mm', { locale: th }) });
+        const product = new Product({ ...req.body, productId: `${count + 1}`, status: 'farmer add product', plantingDate: format(new Date(plantingDate), 'dd/MM/yyyy HH:mm', { locale: th }), expiryDate: format(new Date(expiryDate), 'dd/MM/yyyy HH:mm', { locale: th }), inStockDate: format(new Date(), 'dd/MM/yyyy HH:mm', { locale: th }) });
         await product.save();
         console.log('Product added successfully,', product);
         res.status(201).json({ message: 'Product added successfully', product});
+        
+    } catch (error) {
+        console.error(error);
+        res.status(500).json({ message: 'Internal server error', error: error.message });
+    }
+});
+
+app.post('/update-product-status', async (req, res) => {
+    const { productId, status } = req.body;
+    console.log("update product status", req.body);
+    try {
+        const Product = mongoose.model('Product', productSchema);
+        const product = await Product.findOne({ productId: productId });
+        if (!product) {
+            console.log('Product not found');
+            return res.status(404).json({ message: 'Product not found' });
+        }
+        product.status = status;
+        await product.save();
+        console.log('Product status updated successfully', product);
+        res.status(200).json({ message: 'Product status updated successfully', product});
         
     } catch (error) {
         console.error(error);
