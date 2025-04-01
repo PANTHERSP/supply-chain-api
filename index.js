@@ -7,7 +7,7 @@ const cors = require('cors');
 const app = express();
 const { v4: uuidv4 } = require('uuid');
 const { format, add } = require('date-fns');
-const { th, pl } = require('date-fns/locale');
+const { th, pl, hi } = require('date-fns/locale');
 const { S3Client, PutObjectCommand } = require("@aws-sdk/client-s3");
 const { getSignedUrl } = require("@aws-sdk/s3-request-presigner");
 
@@ -70,6 +70,7 @@ const productSchema = new mongoose.Schema({
     imageUrl: { type: String, required: true },
     productId: { type: String, required: true, unique: true },
     inStockDate: { type: String, required: true },
+    history: { type: Array, required: true },
 }, { timestamps: true });
 
 const s3 = new S3Client(
@@ -198,6 +199,19 @@ app.post('/register', async (req, res) => {
         res.status(500).json({ message: 'Internal server error', error: error.message });
     }
 });
+
+app.get('/users', async (req, res) => {
+    try {
+        const User = mongoose.model('User', userSchema);
+        const users = await User.find();
+        console.log('Users fetched successfully,', users);
+        res.status(200).json({ message: 'Users fetched successfully', users});
+        
+    } catch (error) {
+        console.error(error);
+        res.status(500).json({ message: 'Internal server error', error: error.message });
+    }
+})
 
 app.post('/add-product', async (req, res) => {
     // const { productName, productCode, productDescription, price, quantity, weight, farmName, farmDetails, latitude, longitude, plantingDate, expiryDate } = req.body;
