@@ -58,15 +58,14 @@ const dealSchema = new mongoose.Schema({
 
 const productSchema = new mongoose.Schema({
     dealId: { type: String, required: true },
-    status: { type: String, required: true },
     productName: { type: String, required: true },
     productCode: { type: String, required: true },
     price: { type: Number, required: true },
     quantity: { type: Number, required: true },
     grade: { type: String, required: true },
     farmName: { type: String, required: true },
-    plantingDate: { type: String, required: true },
-    expiryDate: { type: String, required: true },
+    plantDate: { type: String, required: true },
+    harvestDate: { type: String, required: true },
     imageUrl: { type: String, required: true },
     productId: { type: String, required: true, unique: true },
     inStockDate: { type: String, required: true },
@@ -214,13 +213,13 @@ app.get('/users', async (req, res) => {
 })
 
 app.post('/add-product', async (req, res) => {
-    // const { productName, productCode, productDescription, price, quantity, weight, farmName, farmDetails, latitude, longitude, plantingDate, expiryDate } = req.body;
-    const { plantingDate, expiryDate } = req.body;
+    // const { productName, productCode, productDescription, price, quantity, weight, farmName, farmDetails, latitude, longitude, plantDate, harvestDate } = req.body;
+    // const { plantDate, harvestDate } = req.body;
     console.log("add product", req.body);
     try {
         const Product = mongoose.model('Product', productSchema);
         const count = await Product.countDocuments();
-        const product = new Product({ ...req.body, productId: `${count + 1}`, status: 'farmer add product', plantingDate: format(new Date(plantingDate), 'dd/MM/yyyy HH:mm', { locale: th }), expiryDate: format(new Date(expiryDate), 'dd/MM/yyyy HH:mm', { locale: th }), inStockDate: format(new Date(), 'dd/MM/yyyy HH:mm', { locale: th }) });
+        const product = new Product({ ...req.body, productId: `${count + 1}`, inStockDate: format(new Date(), 'dd/MM/yyyy HH:mm', { locale: th }) });
         await product.save();
         console.log('Product added successfully,', product);
         res.status(201).json({ message: 'Product added successfully', product});
@@ -231,20 +230,24 @@ app.post('/add-product', async (req, res) => {
     }
 });
 
-app.post('/update-product-status', async (req, res) => {
-    const { productId, status } = req.body;
-    console.log("update product status", req.body);
+app.post('/update-product', async (req, res) => {
+    const { productId, history } = req.body;
+    console.log("update product", req.body);
     try {
         const Product = mongoose.model('Product', productSchema);
-        const product = await Product.findOne({ productId: productId });
+        const product = await Product.findOneAndUpdate({
+            productId: productId 
+        },
+        { 
+            $set: { history }
+        }, { new: true });
         if (!product) {
             console.log('Product not found');
             return res.status(404).json({ message: 'Product not found' });
         }
-        product.status = status;
         await product.save();
-        console.log('Product status updated successfully', product);
-        res.status(200).json({ message: 'Product status updated successfully', product});
+        console.log('Product updated successfully', product);
+        res.status(200).json({ message: 'Product updated successfully', product});
         
     } catch (error) {
         console.error(error);
